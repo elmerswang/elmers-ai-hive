@@ -82,10 +82,10 @@ body.no3d::before{content:"";position:fixed;inset:-20%;z-index:0;pointer-events:
   transition:opacity .25s,transform .25s}
 #themePanel.open{opacity:1;transform:none;pointer-events:auto}
 #themePanel h5{font-size:12px;letter-spacing:.2em;color:var(--muted);margin-bottom:10px}
-#themePanel .tps{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
-#themePanel .tp{flex:1;min-width:56px;padding:9px 4px;border-radius:11px;cursor:pointer;border:1px solid rgba(125,232,255,.15);
+#themePanel .tps,#sndPanel .tps{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+#themePanel .tp,#sndPanel .tp{flex:1;min-width:56px;padding:9px 4px;border-radius:11px;cursor:pointer;border:1px solid rgba(125,232,255,.15);
   background:rgba(14,22,40,.6);color:var(--text);font-size:11.5px;font-weight:700;font-family:inherit;letter-spacing:.04em}
-#themePanel .tp.sel{border-color:var(--ice);box-shadow:0 0 12px rgba(56,208,239,.35)}
+#themePanel .tp.sel,#sndPanel .tp.sel{border-color:var(--ice);box-shadow:0 0 12px rgba(56,208,239,.35)}
 #themePanel .tp.dice{color:var(--honey2)}
 #themePanel label{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted);margin-top:10px}
 #themePanel input[type=range]{flex:1;accent-color:var(--ice)}
@@ -790,9 +790,11 @@ body.pub #admin,body.pub #aform{display:none !important}
   <h5>🔔 介 面 音 效</h5>
   <label><input type="checkbox" id="sfxChk"> 開啟</label>
   <label>🔉 <input type="range" id="sfxVol" min="0" max="1" step="0.05" value="0.6"> 🔊</label>
-  <h5>🎵 背 景 音 樂（科 技 氛 圍）</h5>
+  <h5>🎵 背 景 音 樂（星 空 氛 圍）</h5>
   <label><input type="checkbox" id="musChk"> 開啟</label>
   <label>🔉 <input type="range" id="musVol" min="0" max="1" step="0.05" value="0.4"> 🔊</label>
+  <h5>曲 目</h5>
+  <div class="tps" id="musTrk"></div>
 </div>
 
 <section id="planetStage" aria-label="蜂巢星球">
@@ -1000,7 +1002,7 @@ const touch = matchMedia('(pointer: coarse)').matches;
 
 /* ============================================================
    🔊 聲音引擎 v2（Web Audio 現場合成，零音檔）
-   —— 柔和介面音效 ＋ 蜜蜂嗡鳴 ＋ 生成式科技氛圍音樂，音量分開調
+   —— 柔和介面音效 ＋ 大黃蜂嗡鳴 ＋ 生成式科技氛圍音樂，音量分開調
    ============================================================ */
 const SND = (()=>{
   let ctx=null, gSfx=null, gMus=null;
@@ -1055,7 +1057,7 @@ const SND = (()=>{
     src.connect(f); f.connect(g); g.connect(gSfx);
     src.start(t); src.stop(t+.6);
   }
-  /* 蜜蜂嗡鳴：鋸齒低頻＋翅膀顫音 AM */
+  /* 大黃蜂嗡鳴：鋸齒低頻＋翅膀顫音 AM */
   function buzz(dur=.5, vol=.05){
     if(!S.sfx) return;
     const c = ac(); if(!c) return;
@@ -1074,26 +1076,33 @@ const SND = (()=>{
     o.start(t); o2.start(t); lfo.start(t);
     o.stop(t+dur+.05); o2.stop(t+dur+.05); lfo.stop(t+dur+.05);
   }
-  /* 生成式氛圍音樂：慢和弦墊底＋偶發五聲音階星光 */
+  /* 生成式氛圍音樂：慢和弦墊底＋偶發五聲音階星光（三首曲目可選） */
   let musTimer=null, sparkTimer=null, started=false;
-  const CHORDS = [
-    [130.81,196.00,329.63,392.00],
-    [110.00,164.81,261.63,329.63],
-    [87.31,130.81,220.00,349.23],
-    [98.00,146.83,246.94,392.00]
+  const TRACKS = [
+    { n:'星空漫遊', wave:'triangle', gap:9.5, lp:360,
+      chords:[[130.81,196.00,329.63,392.00],[110.00,164.81,261.63,329.63],
+              [87.31,130.81,220.00,349.23],[98.00,146.83,246.94,392.00]] },
+    { n:'蜂巢冥想', wave:'sine', gap:12.5, lp:300,
+      chords:[[65.41,98.00,130.81,196.00],[73.42,110.00,146.83,220.00],
+              [61.74,92.50,123.47,185.00],[65.41,98.00,164.81,196.00]] },
+    { n:'晨光飛行', wave:'triangle', gap:8, lp:430,
+      chords:[[164.81,246.94,329.63,415.30],[146.83,220.00,293.66,369.99],
+              [130.81,196.00,261.63,329.63],[174.61,261.63,349.23,440.00]] }
   ];
+  if(typeof S.trk !== 'number' || S.trk<0 || S.trk>=TRACKS.length) S.trk = 0;
   let ci=0;
   function pad(){
     if(!S.mus || !ctx) return;
+    const tr = TRACKS[S.trk];
     const c = ctx, t = c.currentTime;
-    CHORDS[ci%CHORDS.length].forEach((fq,i)=>{
+    tr.chords[ci%tr.chords.length].forEach((fq,i)=>{
       [0,1].forEach(k=>{
-        const o = c.createOscillator(); o.type='triangle';
+        const o = c.createOscillator(); o.type = tr.wave;
         o.frequency.value = fq * (k? 1.003 : .997);
         const f = c.createBiquadFilter(); f.type='lowpass';
-        f.frequency.setValueAtTime(360+i*90, t);
-        f.frequency.linearRampToValueAtTime(620+i*90, t+5);
-        f.frequency.linearRampToValueAtTime(360+i*90, t+10);
+        f.frequency.setValueAtTime(tr.lp+i*90, t);
+        f.frequency.linearRampToValueAtTime(tr.lp+260+i*90, t+5);
+        f.frequency.linearRampToValueAtTime(tr.lp+i*90, t+10);
         const g = c.createGain();
         g.gain.setValueAtTime(0, t);
         g.gain.linearRampToValueAtTime(.05, t+3);
@@ -1123,8 +1132,16 @@ const SND = (()=>{
     if(!ac()) return;
     started = true;
     pad();
-    musTimer = setInterval(pad, 9500);
+    musTimer = setInterval(pad, TRACKS[S.trk].gap*1000);
     sparkTimer = setInterval(()=>{ if(Math.random()<.7) sparkle(); }, 4200);
+  }
+  function setTrack(i){
+    S.trk = i; save();
+    if(started){
+      clearInterval(musTimer);
+      pad();
+      musTimer = setInterval(pad, TRACKS[S.trk].gap*1000);
+    }
   }
   function stopMusic(){
     started = false;
@@ -1137,10 +1154,12 @@ const SND = (()=>{
   }
   return {
     get s(){ return S; },
+    get tracks(){ return TRACKS.map(t=>t.n); },
     set(k, v){
       S[k] = v; save(); applyVols();
       if(k==='mus'){ v ? (gMus && (gMus.gain.value=S.mv*.16), startMusic()) : stopMusic(); }
     },
+    setTrack,
     startMusic,
     hover(){ tone(520,.09,.028,0,'triangle',900); },
     click(){ tone(392,.12,.05); tone(523.25,.14,.04,.06); },
@@ -1163,6 +1182,15 @@ const SND = (()=>{
   sfxVol.addEventListener('input', ()=>{ SND.set('sv', +sfxVol.value); SND.hover(); });
   musChk.addEventListener('change', ()=>{ SND.set('mus', musChk.checked); icon(); });
   musVol.addEventListener('input', ()=>{ SND.set('mv', +musVol.value); });
+  const trkBox = document.getElementById('musTrk');
+  function drawTrk(){
+    trkBox.innerHTML = SND.tracks.map((n,i)=>
+      `<button class="tp ${i===SND.s.trk?'sel':''}" data-trk="${i}">${n}</button>`).join('');
+    trkBox.querySelectorAll('button').forEach(b=> b.addEventListener('click', ()=>{
+      SND.setTrack(+b.dataset.trk); drawTrk();
+    }));
+  }
+  drawTrk();
   btn.addEventListener('click', e=>{ e.stopPropagation(); panel.classList.toggle('open'); });
   document.addEventListener('click', e=>{
     if(!panel.contains(e.target) && e.target.id!=='sndBtn') panel.classList.remove('open');
@@ -2256,10 +2284,20 @@ addEventListener('resize', ()=>{ clearTimeout(_rt); _rt = setTimeout(renderWall,
       seg.position.set(bx,by,0); seg.scale.set(1.3,1,1);
       body.add(seg); bx-=rad*.78;
     });
-    const sting=new THREE.Mesh(new THREE.ConeGeometry(.05,.32,4),matB);
+    const sting=new THREE.Mesh(new THREE.ConeGeometry(.045,.3,4),matB);
     sting.rotation.z=Math.PI/2 - .25;
     sting.position.set(bx+.02, by-.1, 0);
     body.add(sting);
+    /* 尾針天線塔台：發光信標——向外發射訊號、照亮他人（光色＝當前任務） */
+    const beaconG=new THREE.Group();
+    beaconG.position.set(bx-.15, by-.05, 0);
+    const bulb=new THREE.Mesh(new THREE.SphereGeometry(.05,6,5),
+      new THREE.MeshBasicMaterial({color:0xffdd7a}));
+    const halo=new THREE.Sprite(new THREE.SpriteMaterial({map:spriteTex,color:0xffdd7a,
+      transparent:true,opacity:.8,blending:THREE.AdditiveBlending,depthWrite:false}));
+    halo.scale.setScalar(.5);
+    beaconG.add(bulb, halo);
+    body.add(beaconG);
     /* 雙層水晶翅（前大後小） */
     const foreShape=new THREE.Shape();
     foreShape.moveTo(0,0);foreShape.lineTo(.5,.55);foreShape.lineTo(1.65,.8);foreShape.lineTo(2.1,.44);foreShape.lineTo(1.45,.1);foreShape.lineTo(.4,-.09);foreShape.lineTo(0,0);
@@ -2286,6 +2324,14 @@ addEventListener('resize', ()=>{ clearTimeout(_rt); _rt = setTimeout(renderWall,
       flap(t){
         const f=Math.sin(t*30);
         pivs.forEach(w=>{ w.p.rotation.x = f*.6*w.k*(w.s>0?1:-1)*-1; });
+      },
+      beacon:{
+        set(c){ bulb.material.color.set(c); halo.material.color.set(c); },
+        pulse(t, ph, flash){
+          const boost = flash>0 ? Math.exp(-Math.max(0,t-flash)*2.5) : 0;
+          halo.material.opacity = .5 + .3*Math.sin(t*3+ph*7) + boost*.45;
+          halo.scale.setScalar(.45 + .12*Math.sin(t*3+ph*7) + boost*.55);
+        }
       }
     };
   }
@@ -2305,7 +2351,7 @@ addEventListener('resize', ()=>{ clearTimeout(_rt); _rt = setTimeout(renderWall,
     o.pivot.add(o.h.root);
     orbits.add(o.pivot);
   });
-  /* 2 隻自由巡航蜂（全頁遊走） */
+  /* 4 隻自由巡航蜂（全頁遊走） */
   const cruisers=[
     { h:makeHornet(.48), speed:1/48, ph:0,
       path:new THREE.CatmullRomCurve3(
@@ -2314,9 +2360,23 @@ addEventListener('resize', ()=>{ clearTimeout(_rt); _rt = setTimeout(renderWall,
     { h:makeHornet(.34), speed:1/62, ph:.5,
       path:new THREE.CatmullRomCurve3(
         [[14,6,-2],[2,3,5],[-13,6.5,-1],[-17,0,2],[-5,-4,6],[10,-3,1]].map(p=>new THREE.Vector3(...p)),
+        true,'catmullrom',.7) },
+    { h:makeHornet(.4), speed:1/55, ph:.25,
+      path:new THREE.CatmullRomCurve3(
+        [[-17,-1,3],[-6,6,6],[8,7.5,2],[17,3,4],[9,-4.5,6],[-4,-6,3]].map(p=>new THREE.Vector3(...p)),
+        true,'catmullrom',.7) },
+    { h:makeHornet(.28), speed:1/70, ph:.75,
+      path:new THREE.CatmullRomCurve3(
+        [[10,8,-4],[-8,4,-2],[-16,6,1],[-10,-2,5],[4,-6,4],[15,-1,-1]].map(p=>new THREE.Vector3(...p)),
         true,'catmullrom',.7) }
   ];
   cruisers.forEach(c=>scene.add(c.h.root));
+
+  /* 大黃蜂任務名冊：尾針信標光色＝當前任務（四區色輪值，換班時閃一下） */
+  const HORNETS=[...guards.map((g,i)=>({h:g.h, ph:g.phase, ci:i})),
+                 ...cruisers.map((c,i)=>({h:c.h, ph:c.ph*9, ci:(i+2)%4}))];
+  HORNETS.forEach(o=>{ o.nextSwap=5+Math.random()*10; o.flash=-9;
+    o.h.beacon.set(new THREE.Color(ZC(o.ci))); });
 
   /* ---- 星球互動：全向拖曳（軌跡球）/ hover / 點擊 ---- */
   const stage=document.getElementById('planetStage');
@@ -2456,6 +2516,17 @@ addEventListener('resize', ()=>{ clearTimeout(_rt); _rt = setTimeout(renderWall,
         o.h.flap(t);
       });
     }
+    /* 信標輪值：時間到換任務色，換班閃光 */
+    HORNETS.forEach(o=>{
+      if(t>o.nextSwap){
+        o.ci=(o.ci+1)%4;
+        o.h.beacon.set(new THREE.Color(ZC(o.ci)));
+        o.flash=t;
+        o.nextSwap=t+9+Math.random()*9;
+      }
+      o.h.beacon.pulse(t, o.ph, o.flash);
+    });
+
     /* 巡航蜂永遠在場 */
     cruisers.forEach(c=>{
       const cu=(t*c.speed+c.ph)%1;
