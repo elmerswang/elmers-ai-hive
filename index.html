@@ -2158,7 +2158,7 @@ addEventListener('resize', ()=>{ clearTimeout(_rt); _rt = setTimeout(renderWall,
     /* 內核殼改半透明——原本是不透明實心，裡面的核心星團會被完全擋住看不到。
        這是唯一動到的既有物件，其餘外殼/磚/線框/軌道一律沒動。 */
     const core=new THREE.Mesh(new THREE.IcosahedronGeometry(PR*.88,1),
-      new THREE.MeshBasicMaterial({color:0x0a1c2e,transparent:true,opacity:.5,depthWrite:false}));
+      new THREE.MeshBasicMaterial({color:0x0a1c2e,transparent:true,opacity:.62,depthWrite:false}));
     planet.add(core);
 
     /* ══ 核心（從 elmers.ai 正式站移植）══
@@ -2187,7 +2187,7 @@ addEventListener('resize', ()=>{ clearTimeout(_rt); _rt = setTimeout(renderWall,
       gGeo.setAttribute('position',new THREE.BufferAttribute(pos,3));
       gGeo.setAttribute('color',new THREE.BufferAttribute(col,3));
       planet.add(new THREE.Points(gGeo,new THREE.PointsMaterial({
-        size:.09,vertexColors:true,transparent:true,opacity:.85,
+        size:.075,vertexColors:true,transparent:true,opacity:.42,
         blending:THREE.AdditiveBlending,depthWrite:false,sizeAttenuation:true})));
 
       /* ② 核心星團 340 顆（越靠中心越密） */
@@ -2199,15 +2199,15 @@ addEventListener('resize', ()=>{ clearTimeout(_rt); _rt = setTimeout(renderWall,
       }
       const cGeo=new THREE.BufferGeometry();
       cGeo.setAttribute('position',new THREE.BufferAttribute(cp,3));
-      const cMat=new THREE.PointsMaterial({color:0xffe6ae,size:.07,transparent:true,opacity:.9,
+      const cMat=new THREE.PointsMaterial({color:0xffe6ae,size:.055,transparent:true,opacity:.5,
         blending:THREE.AdditiveBlending,depthWrite:false,sizeAttenuation:true});
       const cluster=new THREE.Points(cGeo,cMat); planet.add(cluster);
 
       /* ③ 極小柔暈 + 白熱點（半徑壓在 PR*.1 內，不能變成一塊看得見的圓） */
-      const haloMat=new THREE.MeshBasicMaterial({color:0xffcf72,transparent:true,opacity:.18,
+      const haloMat=new THREE.MeshBasicMaterial({color:0xffcf72,transparent:true,opacity:.1,
         blending:THREE.AdditiveBlending,depthWrite:false});
       planet.add(new THREE.Mesh(new THREE.SphereGeometry(PR*.1,20,20),haloMat));
-      const hotMat=new THREE.MeshBasicMaterial({color:0xfff8e6,transparent:true,opacity:.95,depthWrite:false});
+      const hotMat=new THREE.MeshBasicMaterial({color:0xfff8e6,transparent:true,opacity:.6,depthWrite:false});
       const hot=new THREE.Mesh(new THREE.SphereGeometry(PR*.055,16,16),hotMat); planet.add(hot);
 
       /* 交給 step() 逐幀脈動 */
@@ -2530,10 +2530,10 @@ addEventListener('resize', ()=>{ clearTimeout(_rt); _rt = setTimeout(renderWall,
     if(window.__hiveCore){
       const C=window.__hiveCore;
       const pulse=(.5+.5*Math.sin(t*1.9))*(.72+.28*Math.sin(t*5.1+1.3));
-      C.hotMat.opacity=.7+.3*pulse;
-      C.hot.scale.setScalar(.92+.26*pulse);
-      C.haloMat.opacity=.16+.18*pulse;
-      C.cMat.opacity=.78+.22*pulse;
+      C.hotMat.opacity=.42+.14*pulse;
+      C.hot.scale.setScalar(.95+.1*pulse);
+      C.haloMat.opacity=.07+.06*pulse;
+      C.cMat.opacity=.4+.12*pulse;
       C.cluster.rotation.y=t*.12;
     }
     grid.userData.uni.uTime.value=t;
